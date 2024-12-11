@@ -1,6 +1,6 @@
 const create = async (category) => {
     try {
-        let response = await fetch('/api/categories/', {
+        let response = await fetch(`/api/categories/`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -16,7 +16,7 @@ const create = async (category) => {
 
 const list = async (signal) => {
     try {
-        let response = await fetch('/api/categories/', {
+        let response = await fetch(`/api/categories/`, {
             method: 'GET',
             signal: signal,
         })
@@ -28,7 +28,7 @@ const list = async (signal) => {
 
 const read = async (params, signal) => {
     try {
-        let response = await fetch('/api/categories/' + params.categoryId, {
+        let response = await fetch(`/api/categories/` + params.categoryId, {
             method: 'GET',
             signal: signal,
         })
@@ -40,7 +40,7 @@ const read = async (params, signal) => {
 
 const update = async (params, category) => {
     try {
-        let response = await fetch('/api/categories/' + params.categoryId, {
+        let response = await fetch(`/api/categories/` + params.categoryId, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -56,7 +56,7 @@ const update = async (params, category) => {
 
 const remove = async (params) => {
     try {
-        let response = await fetch('/api/categories/' + params.categoryId, {
+        let response = await fetch(`/api/categories/` + params.categoryId, {
             method: 'DELETE'
         })
         return await response.json()

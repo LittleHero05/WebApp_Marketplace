@@ -5,6 +5,7 @@ import { useAuth } from "../../helpers/auth-context.jsx";
 import { remove } from "../../frontend-ctrl/api-listing.js";
 import { useCart } from "../../helpers/CartContext.jsx";
 import { useFavourites } from "../../helpers/FavouritesContext.jsx";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -22,12 +23,14 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import "./ListingCard.css";
 
-const ListingCard = ({ listing, onRemoveFromFavourites }) => {
+const ListingCard = ({ listing }) => {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { addToFavourites } = useFavourites();
   const location = useLocation();
 
+  const [isOpen, setIsOpen] = useState(false); // Modal state
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success"); // Default severity is success
@@ -40,14 +43,14 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
   const handleAddToCart = () => {
     addToCart(listing);
     setSnackbarMessage(`${listing.title} added to cart!`);
-    setSnackbarSeverity("success"); // Success for adding to cart
+    setSnackbarSeverity("success");
     setSnackbarOpen(true);
   };
 
   const handleAddToFavourites = () => {
     addToFavourites(listing);
     setSnackbarMessage(`${listing.title} added to favourites!`);
-    setSnackbarSeverity("success"); // Success for adding to favourites
+    setSnackbarSeverity("success");
     setSnackbarOpen(true);
   };
 
@@ -62,18 +65,20 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
         setSnackbarMessage(`${listing.title} deleted successfully!`);
         setSnackbarSeverity("success");
         setSnackbarOpen(true);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
       } else {
         throw new Error(response.error || "Failed to remove the listing.");
       }
-    } catch (err) {
-      setSnackbarMessage("Error removing listing.");
+    } catch (error) {
+      console.error("Error removing listing:", error);
+      setSnackbarMessage("An error occurred while deleting the listing.");
       setSnackbarSeverity("error");
       setSnackbarOpen(true);
+    } finally {
+      // Reload the webpage after the process
+      window.location.reload();
     }
   };
+
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
@@ -81,7 +86,7 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
 
   return (
       <>
-        <Card className="listing-card">
+        <Card className="listing-card" onClick={() => setIsOpen(true)}>
           {/* Display image if it exists */}
           {listing.images && listing.images.length > 0 && (
               <CardMedia
@@ -99,13 +104,12 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
                 </Typography>
             )}
             {listing.description && (
-                <Typography variant="body2" color="textSecondary" className="listing-description">
+                <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    className="listing-description"
+                >
                   {listing.description}
-                </Typography>
-            )}
-            {listing.price && (
-                <Typography variant="body1" color="textPrimary" className="listing-price">
-                  ${listing.price}
                 </Typography>
             )}
             {listing.condition && (
@@ -128,9 +132,18 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
                       .join(" ")}
                 </Typography>
             )}
+            {listing.price && (
+                <Typography
+                    variant="body1"
+                    color="textPrimary"
+                    className="listing-price"
+                >
+                  ${listing.price}
+                </Typography>
+            )}
 
             {/* Public buttons */}
-            {isAuthenticated && showPublicButtons && (
+            {isAuthenticated && showPublicButtons && !isOpen && (
                 <Box className="fab-container">
                   <Tooltip title="Add to Cart" arrow>
                     <Fab
@@ -163,9 +176,9 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
                     <Fab
                         color="primary"
                         size="small"
-                        onClick={() => console.log(listing._id)}
+                        onClick={() => navigate(`/listings/edit/${listing.id}`)}
                         aria-label="Edit Listing"
-                        sx={{ marginRight: 1 }}
+                        sx={{ marginRight: 2 }}
                     >
                       <EditIcon />
                     </Fab>
@@ -174,31 +187,10 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
                     <Fab
                         color="secondary"
                         size="small"
-                        onClick={() => handleRemoveListing(listing._id, isAuthenticated.token)}
+                        onClick={() =>
+                            handleRemoveListing(listing._id, isAuthenticated.token)
+                        }
                         aria-label="Delete Listing"
-                    >
-                      <DeleteIcon />
-                    </Fab>
-                  </Tooltip>
-                </Box>
-            )}
-
-            {/* Remove from Favourites button */}
-            {onRemoveFromFavourites && (
-                <Box mt={2} sx={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                  <Tooltip title="Remove From Favourites" arrow>
-                    <Fab
-                        color="error"
-                        size="small"
-                        onClick={() => {
-                          setSnackbarMessage(`${listing.title} removed from favourites!`);
-                          setSnackbarSeverity("error");
-                          setSnackbarOpen(true);
-                          setTimeout(() => {
-                            onRemoveFromFavourites();
-                          }, 1200);
-                        }}
-                        aria-label="Remove from Favourites"
                     >
                       <DeleteIcon />
                     </Fab>
@@ -208,6 +200,97 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
           </CardContent>
         </Card>
 
+        {/* Modal for expanded view */}
+        {isOpen && (
+            <div className="modal-overlay" onClick={() => setIsOpen(false)}>
+              <div
+                  className="modal-content"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing on inner content click
+              >
+                {listing.images && listing.images.length > 0 && (
+                    <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className="modal-image"
+                    />
+                )}
+                <Typography variant="h6" className="listing-title">
+                  {listing.title}
+                </Typography>
+                <Typography
+                    variant="body2"
+                    color="textSecondary"
+                    className="listing-description"
+                >
+                  {listing.description}
+                </Typography>
+                {listing.condition && (
+                    <Typography variant="body2" color="textSecondary" className="listing-condition">
+                      Condition: {listing.condition}
+                    </Typography>
+                )}
+                {listing.status && (
+                    <Typography variant="body2" color="textSecondary" className="listing-status">
+                      Status: {listing.status}
+                    </Typography>
+                )}
+                {listing.postedBy?.name && (
+                    <Typography variant="body2" color="textSecondary" className="listing-posted-by">
+                      Posted by:{" "}
+                      {listing.postedBy.name
+                          .toLowerCase()
+                          .split(" ")
+                          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(" ")}
+                    </Typography>
+                )}
+                {listing.price && (
+                    <Typography
+                        variant="body1"
+                        color="textPrimary"
+                        className="listing-price"
+                    >
+                      ${listing.price}
+                    </Typography>
+                )}
+
+                {/* Buttons for "Add to Cart" and "Add to Favorites" - Render only in modal */}
+                {isOpen && (
+                    <div className="modal-buttons">
+                      <Tooltip title="Add to Cart" arrow>
+                        <Fab
+                            color="primary"
+                            size="small"
+                            onClick={handleAddToCart}
+                            aria-label="Add to Cart"
+                            sx={{ marginRight: 1 }}
+                        >
+                          <AddShoppingCartIcon />
+                        </Fab>
+                      </Tooltip>
+                      <Tooltip title="Add to Favorites" arrow>
+                        <Fab
+                            color="secondary"
+                            size="small"
+                            onClick={handleAddToFavourites}
+                            aria-label="Add to Favorites"
+                        >
+                          <FavoriteIcon />
+                        </Fab>
+                      </Tooltip>
+                    </div>
+                )}
+
+                <button
+                    className="close-button"
+                    onClick={() => setIsOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+        )}
+
         {/* Snackbar Component */}
         <Snackbar
             open={snackbarOpen}
@@ -215,7 +298,11 @@ const ListingCard = ({ listing, onRemoveFromFavourites }) => {
             onClose={handleSnackbarClose}
             anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
-          <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: "100%" }}>
+          <Alert
+              onClose={handleSnackbarClose}
+              severity={snackbarSeverity}
+              sx={{ width: "100%" }}
+          >
             {snackbarMessage}
           </Alert>
         </Snackbar>
